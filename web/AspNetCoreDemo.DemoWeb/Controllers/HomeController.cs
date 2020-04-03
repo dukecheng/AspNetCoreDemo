@@ -1,25 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using AspNetCoreDemo.DemoWeb.Models;
+using AspNetCoreDemo.ShareWebFramework.Sessions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using AspNetCoreDemo.DemoWeb.Models;
+using System.Diagnostics;
 
 namespace AspNetCoreDemo.DemoWeb.Controllers
 {
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
+        private readonly IUserSession _userSession;
 
-        public HomeController(ILogger<HomeController> logger)
+        public HomeController(ILogger<HomeController> logger, IUserSession userSession)
         {
             _logger = logger;
+            _userSession = userSession;
         }
 
+        [Authorize]
         public IActionResult Index()
         {
+            ViewBag.CurrentUserName = _userSession.DisplayName;
             return View();
         }
 

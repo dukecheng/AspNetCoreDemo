@@ -4,4 +4,8 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\framework\AspNetCoreDemo.ShareWebFramework\AspNetCoreDemo.ShareWebFramework.csproj" />
+  </ItemGroup>
+
 </Project>
