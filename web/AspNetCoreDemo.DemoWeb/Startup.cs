@@ -6,6 +6,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.Threading.Tasks;
+using System.Linq;
+using Microsoft.AspNetCore.Authentication;
+using System;
 
 namespace AspNetCoreDemo.DemoWeb
 {
@@ -25,10 +29,12 @@ namespace AspNetCoreDemo.DemoWeb
             services.AddHttpContextAccessor();
 
             // 添加Cookie认证
+            services.AddScoped<CustomCookieAuthenticationEvents>();
             services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
                 .AddCookie(options =>
                 {
                     options.Cookie.Name = "aspnetcoredemo.auth";
+                    options.EventsType = typeof(CustomCookieAuthenticationEvents);
                 });
 
             services.AddControllersWithViews();
@@ -37,6 +43,7 @@ namespace AspNetCoreDemo.DemoWeb
             #region 基础服务注册
             // 注册UserSession
             services.AddScoped<IUserSession, UserSession>();
+            services.AddScoped<IUserRepository, UserRepository>();
             #endregion
         }
 
@@ -71,6 +78,52 @@ namespace AspNetCoreDemo.DemoWeb
                 endpoints.MapControllerRoute(name: "HomePage", pattern: "", new { controller = "Home", action = "Index" });
                 endpoints.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
             });
+        }
+    }
+
+    public class CustomCookieAuthenticationEvents : CookieAuthenticationEvents
+    {
+        private readonly IUserRepository _userRepository;
+
+        public CustomCookieAuthenticationEvents(IUserRepository userRepository)
+        {
+            // Get the database from registered DI services.
+            _userRepository = userRepository;
+        }
+
+        public override async Task ValidatePrincipal(CookieValidatePrincipalContext context)
+        {
+            var userPrincipal = context.Principal;
+
+            // Look for the LastChanged claim.
+            var lastChanged = (from c in userPrincipal.Claims
+                               where c.Type == "LastChanged"
+                               select c.Value).FirstOrDefault();
+
+            if (string.IsNullOrEmpty(lastChanged) || !_userRepository.ValidateLastChanged(lastChanged))
+            {
+                context.RejectPrincipal();
+
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            }
+        }
+    }
+
+    public interface IUserRepository
+    {
+        bool ValidateLastChanged(string lastChanged);
+    }
+
+    public class UserRepository : IUserRepository
+    {
+        public bool ValidateLastChanged(string lastChanged)
+        {
+            if (!DateTime.TryParse(lastChanged, out var lastChangedTime))
+            {
+                return false;
+            }
+
+            return lastChangedTime.AddSeconds(30) > DateTime.Now;
         }
     }
 }

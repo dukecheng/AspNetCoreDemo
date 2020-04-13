@@ -1,7 +1,18 @@
-﻿@{
+﻿@model LoginViewModel
+@{
     ViewData["Title"] = "Home Page";
 }
 
 <form asp-controller="Account" asp-action="Login" method="post">
+    <div class="form-group">
+        <label for="IsRemberme">记住我?</label>
+        @Html.CheckBoxFor(x => x.IsRemberme, new { @class = "form-control" })
+    </div>
+    <div class="form-group">
+        <label for="IsRemberme">记住时长</label>
+        <select asp-for="RemberDays" asp-items="Html.GetEnumDescriptionSelectList<RemeberOptions>()">
+            <option selected="selected" value="">Please select</option>
+        </select>
+    </div>
     <input type="submit" value="Login" />
 </form>

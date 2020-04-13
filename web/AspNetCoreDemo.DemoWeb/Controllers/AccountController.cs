@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Authentication;
+﻿using AspNetCoreDemo.DemoWeb.Models;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -14,11 +16,12 @@ namespace AspNetCoreDemo.DemoWeb.Controllers
         [HttpGet, AllowAnonymous]
         public IActionResult Login()
         {
-            return View();
+            LoginViewModel loginViewModel = new LoginViewModel();
+            return View(loginViewModel);
         }
 
         [HttpPost, ActionName("Login")]
-        public async Task<IActionResult> LoginPost()
+        public async Task<IActionResult> LoginPost(LoginViewModel loginViewModel)
         {
             var userEmail = "dk@feinian.me";
             var fullName = "Duke Cheng";
@@ -27,28 +30,29 @@ namespace AspNetCoreDemo.DemoWeb.Controllers
             {
                 new Claim(ClaimTypes.Name, userEmail),
                 new Claim(ClaimNames.FullName, fullName),
-};
+                new Claim("LastChanged", DateTime.Now.ToString())
+            };
 
-            var claimsIdentity = new ClaimsIdentity(
-                claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
 
             var authProperties = new AuthenticationProperties
             {
                 //AllowRefresh = <bool>,
                 // Refreshing the authentication session should be allowed.
 
-                //ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(10),
+                // 记住cookie默认三天
+                ExpiresUtc = DateTimeOffset.UtcNow.AddDays((int)loginViewModel.RemberDays),
                 // The time at which the authentication ticket expires. A 
                 // value set here overrides the ExpireTimeSpan option of 
                 // CookieAuthenticationOptions set with AddCookie.
 
-                //IsPersistent = true,
+                IsPersistent = loginViewModel.IsRemberme,
                 // Whether the authentication session is persisted across 
                 // multiple requests. When used with cookies, controls
                 // whether the cookie's lifetime is absolute (matching the
                 // lifetime of the authentication ticket) or session-based.
 
-                //IssuedUtc = <DateTimeOffset>,
+                // IssuedUtc = new DateTimeOffset(DateTime.UtcNow, TimeSpan.FromDays(3)),
                 // The time at which the authentication ticket was issued.
 
                 //RedirectUri = <string>
@@ -58,8 +62,8 @@ namespace AspNetCoreDemo.DemoWeb.Controllers
 
             await HttpContext.SignInAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme,
-                new ClaimsPrincipal(claimsIdentity),
-                authProperties);
+                    new ClaimsPrincipal(claimsIdentity),
+                    authProperties);
 
             return RedirectToRoute("HomePage");
         }
